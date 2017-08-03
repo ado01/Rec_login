@@ -51,6 +51,7 @@ public class Rec_Login implements ITab, IHttpListener{
 
     private IBurpExtenderCallbacks callbacks;
     private String login;
+    private int on_off = 0;
     private JList<String> listview;
     private DefaultListModel lmodel;
     private List<IHttpRequestResponse> action_login;
@@ -61,10 +62,11 @@ public class Rec_Login implements ITab, IHttpListener{
     private int select = 0;
     private IHttpRequestResponse lastresponse;
     private java.util.HashMap<String, String> hashcookie;
-    private MyButton inizio_login;
-    private MyButton fine_login;
-    private MyButton reset_login;
-    private JButton go;
+    private MyButton inizio_login = new MyButton("/Image/play.png","/Image/play_down.png","/Image/play_down.png",0,0);
+    private MyButton fine_login = new MyButton("/Image/stop.png","/Image/stop_down.png","/Image/stop_down.png",0,0);
+    private MyButton reset_login= new MyButton("/Image/reset.png","/Image/reset_down.png","/Image/reset_down.png",0,0);
+    private JButton go = new JButton("go");
+    private JButton buttonOnOff = new JButton("On");
     
     public Rec_Login(IBurpExtenderCallbacks callbacks, PrintWriter Sout) {
         
@@ -75,6 +77,9 @@ public class Rec_Login implements ITab, IHttpListener{
         this.helper = callbacks.getHelpers();
         this.hashcookie = new  java.util.HashMap<String, String>();
         
+        go.setEnabled(false);
+        fine_login.setEnabled(false);
+        inizio_login.setEnabled(false);
     }
 
     @Override
@@ -91,12 +96,13 @@ public class Rec_Login implements ITab, IHttpListener{
         
         Rec.setLayout(new GridBagLayout());
         
-        inizio_login = new MyButton("/Image/play.png","/Image/play_down.png","",0,0);
         //JButton inizio_login = new JButton("inizio_login");
         inizio_login.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 login = "on";
+                fine_login.setEnabled(true);
+                go.setEnabled(false);
                 Sout.println(login);
             }
         });
@@ -107,12 +113,14 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.insets = new Insets(10,10,10,10);
         Rec.add(inizio_login, lay);
         
-        fine_login = new MyButton("/Image/stop.png","/Image/stop_down.png","",0,0);
         //JButton fine_login = new JButton("fine_login");
         fine_login.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 login = "off";
+                go.setEnabled(true);
+                inizio_login.setEnabled(true);
+                Sout.println(login);
             }
         });
         lay.weightx = 0.5;
@@ -122,12 +130,18 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.insets = new Insets(10,10,10,10);
         Rec.add(fine_login, lay);
         
-        reset_login = new MyButton("/Image/reset.png","/Image/reset_down.png","",0,0);
-        //JButton reset_login = new JButton("reset_login");
+       //JButton reset_login = new JButton("reset_login");
         reset_login.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 login = "reset";
+                lmodel.removeAllElements();
+                action_login.clear();
+                requestlabelview.setText("");
+                responselabelview.setText("");
+                hashcookie.clear();
+                go.setEnabled(false);
+                fine_login.setEnabled(false);
             }
         });
         lay.weightx = 0.5;
@@ -203,10 +217,12 @@ public class Rec_Login implements ITab, IHttpListener{
         Rec.add(scrolllabelresponse, lay);
         
         //MyButton go = new MyButton("/Image/play.png","/Image/play_down.png","",0,0);
-        go = new JButton("go");
         go.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e) {    
+            public void actionPerformed(ActionEvent e) { 
+                inizio_login.setEnabled(false);
+                fine_login.setEnabled(false);
+                reset_login.setEnabled(false);
                 int islast=0;
                 for(IHttpRequestResponse req: action_login){  
                     msg_request threq;
@@ -250,6 +266,11 @@ public class Rec_Login implements ITab, IHttpListener{
                     Sout.println("-Chiave:"+pair.getKey()+" -Valore:"+pair.getValue());
                 }
                 responselabelview.setText("<html>"+viewcookie+"</html>");
+                
+                inizio_login.setEnabled(true);
+                fine_login.setEnabled(true);
+                reset_login.setEnabled(true);
+                        
                 Sout.println(hashcookie.size());
                 Sout.println("fine login");
             }
@@ -260,13 +281,38 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.gridy = 0;
         lay.insets = new Insets(10,10,10,10);
         Rec.add(go, lay);
+        
+        buttonOnOff.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if(on_off==1){
+                    on_off=0;
+                    buttonOnOff.setText("On");
+                    inizio_login.setEnabled(false);
+                    fine_login.setEnabled(false);
+                    reset_login.setEnabled(false);
+                    go.setEnabled(false);
+                }else{
+                    on_off=1;
+                    buttonOnOff.setText("Off");
+                    inizio_login.setEnabled(true);
+                }
+            }
+        });
+        lay.weightx = 1;
+        lay.fill = GridBagConstraints.HORIZONTAL;
+        lay.gridx = 3;
+        lay.gridy = 1;
+        lay.insets = new Insets(10,10,10,10);
+        Rec.add(buttonOnOff, lay);
  
         return Rec;
     }
 
     @Override
     public void processHttpMessage(int toolFlag, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
-        if (login.equals("on")) { 
+        if(on_off == 1){
+            if (login.equals("on")) { 
             if(messageIsRequest){//è una richiesta
                 action_login.add(messageInfo);
                 lmodel.addElement(helper.analyzeRequest(messageInfo).getUrl().getHost()+helper.urlDecode(helper.analyzeRequest(messageInfo).getUrl().getFile()));
@@ -316,49 +362,49 @@ public class Rec_Login implements ITab, IHttpListener{
                     Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
                 }
             }
-        }else if(toolFlag == callbacks.TOOL_REPEATER){
-            Sout.println("----------------Provieni da REPEATER--------------");
-        }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
-            Sout.println("----------------Provieni da SCANNER---------------");
-            /*Sout.println(helper.analyzeResponse(lastrequest.getRequest()).getHeaders().get(1));
-            List<ICookie> cookie = helper.analyzeResponse(lastrequest.getResponse()).getCookies();
-            List<String> header = helper.analyzeResponse(lastrequest.getResponse()).getHeaders();
-            for(String h: header){
-                Sout.println("VALUE : "+ h);
-            }
-            Sout.println(hashcookie.size());
-            for(ICookie c: cookie){
-                Sout.println("NAME :"+c.getName()+" VALORE:"+ c.getValue());
-            }*/
-            
-            if(messageIsRequest){
-                Iterator it = hashcookie.entrySet().iterator();
-                while(it.hasNext()){
-                    Map.Entry pair = (Map.Entry<String, String>) it.next();
-                    boolean cookiePresente = false;
-                    for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                        if(par.getName().equals(pair.getKey())){
-                            IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
-                            helper.updateParameter(messageInfo.getRequest(), newParam);
-                            cookiePresente = true; 
-                            //Sout.println("Chiave:"+pair.getKey()+" Valore hash:"+pair.getValue()+"     Valore richiesta:"+par.getValue());
+            }else if(toolFlag == callbacks.TOOL_REPEATER){
+                Sout.println("----------------Provieni da REPEATER--------------");
+            }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
+                Sout.println("----------------Provieni da SCANNER---------------");
+                /*Sout.println(helper.analyzeResponse(lastrequest.getRequest()).getHeaders().get(1));
+                List<ICookie> cookie = helper.analyzeResponse(lastrequest.getResponse()).getCookies();
+                List<String> header = helper.analyzeResponse(lastrequest.getResponse()).getHeaders();
+                for(String h: header){
+                    Sout.println("VALUE : "+ h);
+                }
+                Sout.println(hashcookie.size());
+                for(ICookie c: cookie){
+                    Sout.println("NAME :"+c.getName()+" VALORE:"+ c.getValue());
+                }*/
+
+                if(messageIsRequest){
+                    Iterator it = hashcookie.entrySet().iterator();
+                    while(it.hasNext()){
+                        Map.Entry pair = (Map.Entry<String, String>) it.next();
+                        boolean cookiePresente = false;
+                        for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                            if(par.getName().equals(pair.getKey())){
+                                IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
+                                messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
+                                cookiePresente = true; 
+                                //Sout.println("Chiave:"+pair.getKey()+" Valore hash:"+pair.getValue()+"     Valore richiesta:"+par.getValue());
+                            }
+                        }
+                        if(!cookiePresente){
+                            IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
+                            messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
                         }
                     }
-                    if(!cookiePresente){
-                        IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
-                        helper.addParameter(messageInfo.getRequest(), newParam);
+                    //stampa per verifica
+                    for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                        Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
                     }
-                    //it.remove();
                 }
-                //stampa per verifica
-                for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                    Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
-                }
+            }else if(toolFlag == callbacks.TOOL_INTRUDER){
+                Sout.println("----------------Provieni da INTRUDER--------------");
             }
-            
-        }else if(toolFlag == callbacks.TOOL_INTRUDER){
-            Sout.println("----------------Provieni da INTRUDER--------------");
+        }else{
+            //TODO in caso in cui l'estenzione è spenta (posso anche non fare nulla)
         }
-        //Sout.println(lastrequest.getHttpService().getHost());
     }
 }
