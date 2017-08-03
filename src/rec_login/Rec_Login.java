@@ -45,7 +45,7 @@ import javax.swing.event.ListSelectionListener;
 
 /**
  *
- * @author caluisi
+ * @author xyzt
  */
 public class Rec_Login implements ITab, IHttpListener{
 
