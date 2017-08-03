@@ -7,9 +7,6 @@ import burp.IExtensionHelpers;
 import burp.IHttpListener;
 import burp.IHttpRequestResponse;
 import burp.IParameter;
-import burp.IScanIssue;
-import burp.IScannerCheck;
-import burp.IScannerInsertionPoint;
 import burp.ITab;
 import java.awt.Component;
 import java.awt.Dimension;
@@ -18,16 +15,11 @@ import java.awt.GridBagLayout;
 import java.awt.Insets;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
-import java.io.IOException;
 import java.io.PrintWriter;
-import java.lang.reflect.Array;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
 import javax.swing.JLabel;
@@ -232,9 +224,9 @@ public class Rec_Login implements ITab, IHttpListener{
                     t_last.start();
                     try {
                         t_last.join();
-                        lastresponse = threq.lastrequest;
-                        if(threq.lastrequest.getResponse()!=null){
-                            for(ICookie lc : helper.analyzeResponse(threq.lastrequest.getResponse()).getCookies()){
+                        lastresponse = threq.lastresponse;
+                        if(threq.lastresponse.getResponse()!=null){
+                            for(ICookie lc : helper.analyzeResponse(threq.lastresponse.getResponse()).getCookies()){
                                 boolean trovato = false;
                                 Iterator it = hashcookie.entrySet().iterator();
                                 while(it.hasNext()){
@@ -313,21 +305,21 @@ public class Rec_Login implements ITab, IHttpListener{
                 action_login.add(messageInfo);
                 lmodel.addElement(helper.analyzeRequest(messageInfo).getUrl().getHost()+helper.urlDecode(helper.analyzeRequest(messageInfo).getUrl().getFile()));
             }else{// è una risposta
-                    for(ICookie lc : helper.analyzeResponse(messageInfo.getResponse()).getCookies()){
-                        boolean trovato = false;
-                        Iterator it = hashcookie.entrySet().iterator();
-                        while(it.hasNext()){
-                            Map.Entry pair = (Map.Entry<String, String>) it.next();
-                            Sout.println("Chiave:"+pair.getKey()+" Valore:"+pair.getValue());
-                            if(lc.getName().equals((String)pair.getKey())){
-                                pair.setValue(lc.getValue());
-                                trovato = true;
-                            }        
-                        }
-                        if(!trovato){
-                            hashcookie.put(lc.getName(), lc.getValue());
-                        }
+                for(ICookie lc : helper.analyzeResponse(messageInfo.getResponse()).getCookies()){
+                    boolean trovato = false;
+                    Iterator it = hashcookie.entrySet().iterator();
+                    while(it.hasNext()){
+                        Map.Entry pair = (Map.Entry<String, String>) it.next();
+                        Sout.println("Chiave:"+pair.getKey()+" Valore:"+pair.getValue());
+                        if(lc.getName().equals((String)pair.getKey())){
+                            pair.setValue(lc.getValue());
+                            trovato = true;
+                        }        
                     }
+                    if(!trovato){
+                        hashcookie.put(lc.getName(), lc.getValue());
+                    }
+                }
             }  
         } else if (login.equals("off")) {
             //TODO non sto registrando
@@ -362,17 +354,6 @@ public class Rec_Login implements ITab, IHttpListener{
                 Sout.println("----------------Provieni da REPEATER--------------");
             }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
                 Sout.println("----------------Provieni da SCANNER---------------");
-                /*Sout.println(helper.analyzeResponse(lastrequest.getRequest()).getHeaders().get(1));
-                List<ICookie> cookie = helper.analyzeResponse(lastrequest.getResponse()).getCookies();
-                List<String> header = helper.analyzeResponse(lastrequest.getResponse()).getHeaders();
-                for(String h: header){
-                    Sout.println("VALUE : "+ h);
-                }
-                Sout.println(hashcookie.size());
-                for(ICookie c: cookie){
-                    Sout.println("NAME :"+c.getName()+" VALORE:"+ c.getValue());
-                }*/
-
                 if(messageIsRequest){
                     Iterator it = hashcookie.entrySet().iterator();
                     while(it.hasNext()){

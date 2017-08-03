@@ -12,18 +12,18 @@ import java.io.PrintWriter;
  */
 public class msg_request implements Runnable {
 
-    PrintWriter Sout; 
-    IBurpExtenderCallbacks callbacks;
-    IHttpRequestResponse req;
-    IExtensionHelpers helper;
-    IHttpRequestResponse lastrequest;
-    int flagLastReq;
+    private PrintWriter Sout; 
+    private IBurpExtenderCallbacks callbacks;
+    private IHttpRequestResponse req;
+    private IExtensionHelpers helper;
+    public IHttpRequestResponse lastresponse;
+    public int flagLastReq;
     
-    public msg_request(IBurpExtenderCallbacks callbacks, PrintWriter Sout, IHttpRequestResponse req, IHttpRequestResponse lastrequest,int flagLastReq){
+    public msg_request(IBurpExtenderCallbacks callbacks, PrintWriter Sout, IHttpRequestResponse req, IHttpRequestResponse lastresponse,int flagLastReq){
         this.Sout = Sout;
         this.callbacks = callbacks;
         this.req = req;
-        this.lastrequest = lastrequest;
+        this.lastresponse = lastresponse;
         this.flagLastReq = flagLastReq;
     }
     
@@ -32,10 +32,10 @@ public class msg_request implements Runnable {
         //throw new UnsupportedOperationException("Not supported yet."); //To change body of generated methods, choose Tools | Templates.
         try{
             if(flagLastReq == 0){
-                lastrequest = callbacks.makeHttpRequest(req.getHttpService(), req.getRequest());
+                lastresponse = callbacks.makeHttpRequest(req.getHttpService(), req.getRequest());
                 //Sout.println(helper.bytesToString(response.getResponse()));
             }else {
-                lastrequest = callbacks.makeHttpRequest(req.getHttpService(), req.getRequest());
+                lastresponse = callbacks.makeHttpRequest(req.getHttpService(), req.getRequest());
                 Sout.println("ULTIMA RICHIESTA");
             }
         }catch(Exception e){
