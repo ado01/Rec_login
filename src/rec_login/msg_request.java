@@ -12,7 +12,7 @@ import java.io.PrintWriter;
 
 /**
  *
- * @author caluisi
+ * @author xyt
  */
 public class msg_request implements Runnable {
 
