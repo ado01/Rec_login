@@ -7,7 +7,7 @@ package rec_login;
 
 /**
  *
- * @author caluisi
+ * @author xyzt
  */
 import java.awt.Color;
 import java.awt.Cursor;
