@@ -124,9 +124,12 @@ public class Rec_Login implements ITab, IHttpListener{
             public void actionPerformed(ActionEvent e) {
                 login = "reset";
                 lmodel.removeAllElements();
+                listview.repaint();
                 action_login.clear();
                 requestlabelview.setText("");
+                requestlabelview.repaint();
                 responselabelview.setText("");
+                responselabelview.repaint();
                 hashcookie.clear();
                 go.setEnabled(false);
                 fine_login.setEnabled(false);
@@ -158,7 +161,6 @@ public class Rec_Login implements ITab, IHttpListener{
                     }
                 }   
             }
-
         });
         
         JScrollPane scroll = new JScrollPane(listview);
@@ -213,11 +215,11 @@ public class Rec_Login implements ITab, IHttpListener{
                 reset_login.setEnabled(false);
                 int islast=0;
                 for(IHttpRequestResponse req: action_login){  
-                    msg_request threq;
+                    Msg_Request threq;
                     if(action_login.size() == islast ){
-                        threq = new msg_request(callbacks, Sout, req, lastresponse,1);
+                        threq = new Msg_Request(callbacks, Sout, req, lastresponse,1);
                     }else{
-                        threq = new msg_request(callbacks, Sout, req, lastresponse,0);
+                        threq = new Msg_Request(callbacks, Sout, req, lastresponse,0);
                         //islast++;
                     }
                     Thread t_last=new Thread(threq);
@@ -284,6 +286,7 @@ public class Rec_Login implements ITab, IHttpListener{
                     on_off=1;
                     buttonOnOff.setText("Off");
                     inizio_login.setEnabled(true);
+                    reset_login.setEnabled(true);
                 }
             }
         });
@@ -301,59 +304,37 @@ public class Rec_Login implements ITab, IHttpListener{
     public void processHttpMessage(int toolFlag, boolean messageIsRequest, IHttpRequestResponse messageInfo) {
         if(on_off == 1){
             if (login.equals("on")) { 
-            if(messageIsRequest){//è una richiesta
-                action_login.add(messageInfo);
-                lmodel.addElement(helper.analyzeRequest(messageInfo).getUrl().getHost()+helper.urlDecode(helper.analyzeRequest(messageInfo).getUrl().getFile()));
-            }else{// è una risposta
-                for(ICookie lc : helper.analyzeResponse(messageInfo.getResponse()).getCookies()){
-                    boolean trovato = false;
-                    Iterator it = hashcookie.entrySet().iterator();
-                    while(it.hasNext()){
-                        Map.Entry pair = (Map.Entry<String, String>) it.next();
-                        Sout.println("Chiave:"+pair.getKey()+" Valore:"+pair.getValue());
-                        if(lc.getName().equals((String)pair.getKey())){
-                            pair.setValue(lc.getValue());
-                            trovato = true;
-                        }        
-                    }
-                    if(!trovato){
-                        hashcookie.put(lc.getName(), lc.getValue());
-                    }
-                }
-            }  
-        } else if (login.equals("off")) {
-            //TODO non sto registrando
-            //action_login_response.add(messageInfo);
-        }
-        
-        if(toolFlag == callbacks.TOOL_PROXY){
-            Sout.println("----------------Provieni da PROXY-----------------");
-            if(messageIsRequest){
-                Iterator it = hashcookie.entrySet().iterator();
-                while(it.hasNext()){
-                    Map.Entry pair = (Map.Entry<String, String>) it.next();
-                    boolean cookiePresente = false;
-                    for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                        if(par.getName().equals(pair.getKey())){
-                            IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
-                            messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
-                            cookiePresente = true; 
+                if(messageIsRequest){//è una richiesta
+                    action_login.add(messageInfo);
+                    lmodel.addElement(helper.analyzeRequest(messageInfo).getUrl().getHost()+helper.urlDecode(helper.analyzeRequest(messageInfo).getUrl().getFile()));
+                }else{// è una risposta
+                    for(ICookie lc : helper.analyzeResponse(messageInfo.getResponse()).getCookies()){
+                        boolean trovato = false;
+                        Iterator it = hashcookie.entrySet().iterator();
+                        while(it.hasNext()){
+                            Map.Entry pair = (Map.Entry<String, String>) it.next();
+                            Sout.println("Chiave:"+pair.getKey()+" Valore:"+pair.getValue());
+                            if(lc.getName().equals((String)pair.getKey())){
+                                pair.setValue(lc.getValue());
+                                trovato = true;
+                            }        
+                        }
+                        if(!trovato){
+                            hashcookie.put(lc.getName(), lc.getValue());
                         }
                     }
-                    if(!cookiePresente){
-                        IParameter newParam = helper.buildParameter((String)pair.getKey(), (String)pair.getValue(), IParameter.PARAM_COOKIE);      
-                        messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
-                    }
-                }
-                //stampa per verifica
-                for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                    Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
-                }
+                }  
+            } else if (login.equals("off")) {
+                //TODO non sto registrando
+                //action_login_response.add(messageInfo);
             }
-            }else if(toolFlag == callbacks.TOOL_REPEATER){
-                Sout.println("----------------Provieni da REPEATER--------------");
-            }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
-                Sout.println("----------------Provieni da SCANNER---------------");
+        
+            if(toolFlag == callbacks.TOOL_PROXY || toolFlag == callbacks.TOOL_REPEATER){
+                if(toolFlag == callbacks.TOOL_PROXY){
+                    Sout.println("----------------Provieni da PROXY-----------------");
+                }else{
+                    Sout.println("----------------Provieni da REPEATER--------------");
+                }
                 if(messageIsRequest){
                     Iterator it = hashcookie.entrySet().iterator();
                     while(it.hasNext()){
@@ -364,11 +345,10 @@ public class Rec_Login implements ITab, IHttpListener{
                                 IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
                                 messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
                                 cookiePresente = true; 
-                                //Sout.println("Chiave:"+pair.getKey()+" Valore hash:"+pair.getValue()+"     Valore richiesta:"+par.getValue());
                             }
                         }
                         if(!cookiePresente){
-                            IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
+                            IParameter newParam = helper.buildParameter((String)pair.getKey(), (String)pair.getValue(), IParameter.PARAM_COOKIE);      
                             messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
                         }
                     }
@@ -377,8 +357,32 @@ public class Rec_Login implements ITab, IHttpListener{
                         Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
                     }
                 }
+            }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
+                    Sout.println("----------------Provieni da SCANNER---------------");
+                    if(messageIsRequest){
+                        Iterator it = hashcookie.entrySet().iterator();
+                        while(it.hasNext()){
+                            Map.Entry pair = (Map.Entry<String, String>) it.next();
+                            boolean cookiePresente = false;
+                            for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                                if(par.getName().equals(pair.getKey())){
+                                    IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
+                                    messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
+                                    cookiePresente = true; 
+                                }
+                            }
+                            if(!cookiePresente){
+                                IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
+                                messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
+                            }
+                        }
+                        //stampa per verifica
+                        for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                            Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
+                        }
+                    }
             }else if(toolFlag == callbacks.TOOL_INTRUDER){
-                Sout.println("----------------Provieni da INTRUDER--------------");
+                    Sout.println("----------------Provieni da INTRUDER--------------");
             }
         }else{
             //TODO in caso in cui l'estenzione è spenta (posso anche non fare nulla)
