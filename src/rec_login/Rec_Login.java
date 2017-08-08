@@ -213,50 +213,51 @@ public class Rec_Login implements ITab, IHttpListener{
                 inizio_login.setEnabled(false);
                 fine_login.setEnabled(false);
                 reset_login.setEnabled(false);
-                int islast=0;
-                for(IHttpRequestResponse req: action_login){  
-                    Msg_Request threq;
-                    if(action_login.size() == islast ){
-                        threq = new Msg_Request(callbacks, Sout, req, lastresponse,1);
-                    }else{
-                        threq = new Msg_Request(callbacks, Sout, req, lastresponse,0);
-                        //islast++;
-                    }
-                    Thread t_last=new Thread(threq);
-                    t_last.start();
-                    try {
-                        t_last.join();
-                        lastresponse = threq.lastresponse;
-                        if(threq.lastresponse.getResponse()!=null){
-                            for(ICookie lc : helper.analyzeResponse(threq.lastresponse.getResponse()).getCookies()){
-                                boolean trovato = false;
-                                Iterator it = hashcookie.entrySet().iterator();
-                                while(it.hasNext()){
-                                    Map.Entry pair = (Map.Entry<String, String>) it.next();
-                                    if(lc.getName().equals((String)pair.getKey())){
-                                        pair.setValue(lc.getValue());
-                                        trovato = true;
+                synchronized(hashcookie){
+                    int islast=0;
+                    for(IHttpRequestResponse req: action_login){  
+                        Msg_Request threq;
+                        if(action_login.size() == islast ){
+                            threq = new Msg_Request(callbacks, Sout, req, lastresponse,1);
+                        }else{
+                            threq = new Msg_Request(callbacks, Sout, req, lastresponse,0);
+                            //islast++;
+                        }
+                        Thread t_last=new Thread(threq);
+                        t_last.start();
+                        try {
+                            t_last.join();
+                            lastresponse = threq.lastresponse;
+                            if(threq.lastresponse.getResponse()!=null){
+                                for(ICookie lc : helper.analyzeResponse(threq.lastresponse.getResponse()).getCookies()){
+                                    boolean trovato = false;
+                                    Iterator it = hashcookie.entrySet().iterator();
+                                    while(it.hasNext()){
+                                        Map.Entry pair = (Map.Entry<String, String>) it.next();
+                                        if(lc.getName().equals((String)pair.getKey())){
+                                            pair.setValue(lc.getValue());
+                                            trovato = true;
+                                        }
+                                    }
+                                    if(!trovato){
+                                        hashcookie.put(lc.getName(), lc.getValue());
                                     }
                                 }
-                                if(!trovato){
-                                    hashcookie.put(lc.getName(), lc.getValue());
-                                }
                             }
+                        } catch (InterruptedException ex) {
+                            Sout.println(Rec_Login.class.getName());
                         }       
-                    } catch (InterruptedException ex) {
-                        Sout.println(Rec_Login.class.getName());
-                    }       
+                    }
+                    //stampa per verifica
+                    String viewcookie = "";
+                    Iterator it = hashcookie.entrySet().iterator();
+                    while(it.hasNext()){
+                        Map.Entry pair = (Map.Entry<String, String>) it.next();
+                        viewcookie = viewcookie + "<span>" + pair.getKey() + ":" + pair.getValue() + "</span><br>";
+                        Sout.println("-Chiave:"+pair.getKey()+" -Valore:"+pair.getValue());
+                    }
+                    responselabelview.setText("<html>"+viewcookie+"</html>");
                 }
-                //stampa per verifica
-                String viewcookie = "";
-                Iterator it = hashcookie.entrySet().iterator();
-                while(it.hasNext()){
-                    Map.Entry pair = (Map.Entry<String, String>) it.next();
-                    viewcookie = viewcookie + "<span>" + pair.getKey() + ":" + pair.getValue() + "</span><br>";
-                    Sout.println("-Chiave:"+pair.getKey()+" -Valore:"+pair.getValue());
-                }
-                responselabelview.setText("<html>"+viewcookie+"</html>");
-                
                 inizio_login.setEnabled(true);
                 fine_login.setEnabled(true);
                 reset_login.setEnabled(true);
@@ -360,25 +361,27 @@ public class Rec_Login implements ITab, IHttpListener{
             }else if(toolFlag == callbacks.TOOL_SCANNER && messageIsRequest){
                     Sout.println("----------------Provieni da SCANNER---------------");
                     if(messageIsRequest){
-                        Iterator it = hashcookie.entrySet().iterator();
-                        while(it.hasNext()){
-                            Map.Entry pair = (Map.Entry<String, String>) it.next();
-                            boolean cookiePresente = false;
-                            for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                                if(par.getName().equals(pair.getKey())){
-                                    IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
-                                    messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
-                                    cookiePresente = true; 
+                        synchronized(hashcookie){
+                            Iterator it = hashcookie.entrySet().iterator();
+                            while(it.hasNext()){
+                                Map.Entry pair = (Map.Entry<String, String>) it.next();
+                                boolean cookiePresente = false;
+                                for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                                    if(par.getName().equals(pair.getKey())){
+                                        IParameter newParam = helper.buildParameter((String)pair.getKey(),(String)pair.getValue(),IParameter.PARAM_COOKIE);
+                                        messageInfo.setRequest(helper.updateParameter(messageInfo.getRequest(), newParam));
+                                        cookiePresente = true; 
+                                    }
+                                }
+                                if(!cookiePresente){
+                                    IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
+                                    messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
                                 }
                             }
-                            if(!cookiePresente){
-                                IParameter newParam = helper.buildParameter((String)pair.getValue(), (String)pair.getKey(), IParameter.PARAM_COOKIE);
-                                messageInfo.setRequest(helper.addParameter(messageInfo.getRequest(), newParam));
+                            //stampa per verifica
+                            for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
+                                Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
                             }
-                        }
-                        //stampa per verifica
-                        for(IParameter par: helper.analyzeRequest(messageInfo).getParameters()){
-                            Sout.println("Nome Parametro:"+par.getName()+"Valore Parametro: "+par.getValue());
                         }
                     }
             }else if(toolFlag == callbacks.TOOL_INTRUDER){
