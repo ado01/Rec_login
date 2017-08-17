@@ -22,9 +22,12 @@ import java.util.List;
 import java.util.Map;
 import javax.swing.DefaultListModel;
 import javax.swing.JButton;
+import javax.swing.JFrame;
 import javax.swing.JLabel;
 import javax.swing.JList;
 import javax.swing.JPanel;
+import javax.swing.JProgressBar;
+import javax.swing.JRootPane;
 import javax.swing.JScrollPane;
 import javax.swing.ListSelectionModel;
 import javax.swing.SwingConstants;
@@ -38,6 +41,7 @@ import javax.swing.event.ListSelectionListener;
 public class Rec_Login implements ITab, IHttpListener{
 
     private IBurpExtenderCallbacks callbacks;
+    private JPanel Rec;
     private String login;
     private int on_off = 0;
     private JList<String> listview;
@@ -46,7 +50,8 @@ public class Rec_Login implements ITab, IHttpListener{
     private PrintWriter Sout;
     private IExtensionHelpers helper;
     private JLabel requestlabelview; 
-    private JLabel responselabelview;
+    private MyLabel responselabelview;
+    private MyProgressBar proBar;
     private int select = 0;
     private IHttpRequestResponse lastresponse;
     private java.util.HashMap<String, String> hashcookie;
@@ -78,7 +83,7 @@ public class Rec_Login implements ITab, IHttpListener{
     @Override
     public Component getUiComponent() {
         
-        JPanel Rec = new JPanel();
+        Rec = new JPanel();
    
         GridBagConstraints lay = new GridBagConstraints();
         
@@ -191,7 +196,7 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.gridwidth = 1;
         Rec.add(scrolllabelrequst, lay);
         
-        responselabelview = new JLabel();
+        responselabelview = new MyLabel(this);
         responselabelview.setVerticalAlignment(SwingConstants.NORTH);
         responselabelview.setHorizontalAlignment(SwingConstants.LEFT);
         JScrollPane scrolllabelresponse = new JScrollPane(responselabelview);
@@ -213,56 +218,17 @@ public class Rec_Login implements ITab, IHttpListener{
                 inizio_login.setEnabled(false);
                 fine_login.setEnabled(false);
                 reset_login.setEnabled(false);
-                synchronized(hashcookie){
-                    int islast=0;
-                    for(IHttpRequestResponse req: action_login){  
-                        Msg_Request threq;
-                        if(action_login.size() == islast ){
-                            threq = new Msg_Request(callbacks, Sout, req, lastresponse,1);
-                        }else{
-                            threq = new Msg_Request(callbacks, Sout, req, lastresponse,0);
-                            //islast++;
-                        }
-                        Thread t_last=new Thread(threq);
-                        t_last.start();
-                        try {
-                            t_last.join();
-                            lastresponse = threq.lastresponse;
-                            if(threq.lastresponse.getResponse()!=null){
-                                for(ICookie lc : helper.analyzeResponse(threq.lastresponse.getResponse()).getCookies()){
-                                    boolean trovato = false;
-                                    Iterator it = hashcookie.entrySet().iterator();
-                                    while(it.hasNext()){
-                                        Map.Entry pair = (Map.Entry<String, String>) it.next();
-                                        if(lc.getName().equals((String)pair.getKey())){
-                                            pair.setValue(lc.getValue());
-                                            trovato = true;
-                                        }
-                                    }
-                                    if(!trovato){
-                                        hashcookie.put(lc.getName(), lc.getValue());
-                                    }
-                                }
-                            }
-                        } catch (InterruptedException ex) {
-                            Sout.println(Rec_Login.class.getName());
-                        }       
-                    }
-                    //stampa per verifica
-                    String viewcookie = "";
-                    Iterator it = hashcookie.entrySet().iterator();
-                    while(it.hasNext()){
-                        Map.Entry pair = (Map.Entry<String, String>) it.next();
-                        viewcookie = viewcookie + "<span>" + pair.getKey() + ":" + pair.getValue() + "</span><br>";
-                        Sout.println("-Chiave:"+pair.getKey()+" -Valore:"+pair.getValue());
-                    }
-                    responselabelview.setText("<html>"+viewcookie+"</html>");
+                synchronized(hashcookie){                   
+                    RequestWorker loginWorker = new RequestWorker(callbacks, Sout, action_login, hashcookie, Rec, responselabelview);
+                    loginWorker.addLabelEnvListener(responselabelview);
+                    loginWorker.addProgressEvnListener(proBar);
+                    proBar.setValue(0);
+                    loginWorker.execute();                    
                 }
                 inizio_login.setEnabled(true);
                 fine_login.setEnabled(true);
                 reset_login.setEnabled(true);
-                        
-                Sout.println(hashcookie.size());
+                
                 Sout.println("fine login");
             }
         });
@@ -272,6 +238,15 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.gridy = 0;
         lay.insets = new Insets(10,10,10,10);
         Rec.add(go, lay);
+        
+        proBar = new MyProgressBar();
+        proBar.setValue(0);
+        lay.weightx = 1;
+        lay.fill = GridBagConstraints.HORIZONTAL;
+        lay.gridx = 3;
+        lay.gridy = 1;
+        lay.insets = new Insets(10,10,10,10);
+        Rec.add(proBar, lay);
         
         buttonOnOff.addActionListener(new ActionListener() {
             @Override
@@ -294,10 +269,10 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.weightx = 1;
         lay.fill = GridBagConstraints.HORIZONTAL;
         lay.gridx = 3;
-        lay.gridy = 1;
+        lay.gridy = 3;
         lay.insets = new Insets(10,10,10,10);
         Rec.add(buttonOnOff, lay);
- 
+        
         return Rec;
     }
 
