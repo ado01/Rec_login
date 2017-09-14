@@ -146,7 +146,7 @@ public class Rec_Login implements ITab, IHttpListener{
         lay.gridy = 0;
         lay.insets = new Insets(10,10,10,10);
         Rec.add(reset_login, lay);
-        
+         
         lmodel = new DefaultListModel();
         listview = new JList(lmodel);
         listview.addListSelectionListener(new ListSelectionListener(){    
